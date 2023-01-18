@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+ <!-- contents.xml과 연동되는 Spring interface "dev.mvc.contents.ContentsDAOInter" 선언 -->
+<mapper namespace="dev.mvc.event.EventDAOInter"> 
+
+  <insert id="create" parameterType="dev.mvc.event.EventVO">
+    INSERT INTO event(evtno, evtitle, evdesc, evdate, evimage_r, evimage_t,  evword, cateno, adminno) 
+    VALUES (event_seq.nextval, #{evtitle}, #{evdesc}, #{evdate, jdbcType=VARCHAR}, #{evimage_r}, #{evimage_t}, #{evword}, #{cateno}, #{adminno})
+  </insert>
+
+  <select id="list_by_cateno" resultType="dev.mvc.event.EventVO" parameterType="int">
+    SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno
+    FROM event 
+    WHERE cateno = #{cateno}
+    ORDER BY evtno DESC
+  </select> 
+  
+
+  <select id="read" resultType="dev.mvc.event.EventVO" parameterType="int">
+    SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno
+    FROM event 
+    WHERE evtno = #{evtno}
+  </select>  
+  
+  <select id="list_by_cateno_search" resultType="dev.mvc.event.EventVO" parameterType="HashMap">
+    SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno
+    FROM event 
+    <choose>
+      <when test="word == null or word == ''"> <!-- 검색하지 않는 경우 -->
+        WHERE cateno = #{cateno}
+      </when>
+      <otherwise> <!-- 검색하는 경우 -->
+        WHERE cateno = #{cateno} AND (UPPER(evtitle) LIKE '%' || #{evword} || '%' 
+                                                  OR UPPER(evdesc) LIKE '%' || #{evword} || '%' 
+                                                  OR UPPER(evword) LIKE '%' || #{evword} || '%')
+      </otherwise>
+    </choose>
+    ORDER BY evtno DESC   
+  </select>
+  
+  <select id="search_count" resultType="int" parameterType="HashMap">
+    SELECT COUNT(*) as cnt
+    FROM event
+    <choose>
+      <when test="word == null or word == ''"> <!-- 검색하지 않는 경우의 레코드 갯수 -->
+        WHERE cateno=#{cateno}
+      </when>
+      <otherwise> <!-- 검색하는 경우의 레코드 갯수 -->
+        WHERE cateno=#{cateno} AND (UPPER(evtitle) LIKE '%' || #{evword} || '%' 
+                                                  OR UPPER(evdesc) LIKE '%' || #{evword} || '%' 
+                                                  OR UPPER(evword) LIKE '%' || #{evword} || '%')
+      </otherwise>
+    </choose>
+  </select> 
+  
+  <select id="list_all" resultType="dev.mvc.event.EventVO">
+      SELECT c.name,
+             e.evtno, e.evtitle, e.evdesc, e.evdate, e.evimage_r, e.evimage_rsaved, e.evimage_size, e.evword, e.cateno, e.adminno
+      FROM cate c, event e
+      WHERE c.cateno = e.cateno
+      ORDER BY e.evtno DESC
+  </select>
+  
+  <select id="list_by_cateno_search_paging" resultType="dev.mvc.event.EventVO" parameterType="HashMap">
+   SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno, r
+   FROM (
+              SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno, rownum as r
+              FROM (
+                        SELECT evtno, evtitle, evdesc, evdate, evimage_r, evimage_rsaved, evimage_t, evimage_size, evword, cateno, adminno
+                        FROM event
+                        <choose>
+                          <when test="word == null or word == ''"> <!-- 검색하지 않는 경우 -->
+                             WHERE cateno=#{cateno}
+                          </when>
+                          <otherwise>
+                            WHERE cateno=#{cateno} AND (UPPER(evtitle) LIKE '%' || #{evword} || '%' 
+                                                              OR UPPER(evdesc) LIKE '%' || #{evword} || '%' 
+                                                              OR UPPER(evword) LIKE '%' || #{evword} || '%')
+                          </otherwise>
+                        </choose>
+                        ORDER BY evtno DESC
+               )
+    )
+    WHERE <![CDATA[ r >= #{start_num} AND r <= #{end_num} ]]>
+     
+    <!--  1 page: WHERE r >= 1 AND r <= 10; 
+            2 page: WHERE r >= 11 AND r <= 20;
+            3 page: WHERE r >= 21 AND r <= 30; -->
+     
+  </select>
+  
+  <!-- 텍스트 수정 -->
+  <update id="update_text" parameterType="dev.mvc.event.EventVO">
+    UPDATE event
+    SET evtitle=#{evtitle}, evdesc=#{evdesc}, evword=#{evword},evdate=#{evdate}
+    WHERE evtno = #{evtno}
+  </update>
+  
+  <update id="update_file" parameterType="dev.mvc.event.EventVO">
+    UPDATE event
+    SET evimage_r=#{evimage_r}, evimage_rsaved=#{evimage_rsaved}, evimage_t=#{evimage_t}, evimage_size=#{evimage_size}
+    WHERE evtno = #{evtno}
+  </update>
+  
+  <delete id="delete" parameterType="int">
+    DELETE FROM event
+    WHERE evtno=#{evtno}
+  </delete>
+</mapper>
